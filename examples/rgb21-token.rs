@@ -7,7 +7,7 @@ use bp::{Chain, Outpoint, Tx, Txid};
 use rgb_schemata::{uda_rgb21, uda_schema};
 use rgbstd::containers::BindleContent;
 use rgbstd::interface::rgb21::{Allocation, EmbeddedMedia, OwnedFraction, TokenData, TokenIndex};
-use rgbstd::interface::{rgb21, ContractBuilder, FungibleAllocation};
+use rgbstd::interface::{rgb21, ContractBuilder};
 use rgbstd::persistence::{Inventory, Stock};
 use rgbstd::resolvers::ResolveHeight;
 use rgbstd::stl::{self, DivisibleAssetSpec, Precision, RicardianContract, Timestamp};
@@ -27,11 +27,11 @@ impl ResolveHeight for DumbResolver {
 
 #[rustfmt::skip]
 fn main() {
-    let spec = DivisibleAssetSpec::new("TEST", "Test uda", Precision::CentiMicro);
+    let spec = DivisibleAssetSpec::new("TEST", "Test uda", Precision::Indivisible);
     let terms = RicardianContract::default();
     let created = Timestamp::default();
     let beneficiary = Outpoint::new(
-        Txid::from_hex("623554ac1dcd15496c105a27042c438921f2a82873579be88e74d7ef559a3d91").unwrap(), 
+        Txid::from_hex("623554ac1dcd15496c105a27042c438921f2a82873579be88e74d7ef559a3d91").unwrap(),
         0
     );
 
@@ -39,8 +39,8 @@ fn main() {
     let index = TokenIndex::from_inner(2);
 
     let preview = EmbeddedMedia {
-        ty: stl::MediaType::with("text/*"),     
-        data: SmallBlob::try_from_iter(vec![0, 0]).expect("invalid data"), 
+        ty: stl::MediaType::with("text/*"),
+        data: SmallBlob::try_from_iter(vec![0, 0]).expect("invalid data"),
     };
 
     let token_data = TokenData { index, preview: Some(preview), ..Default::default() };
@@ -65,7 +65,7 @@ fn main() {
         .add_global_state("terms", terms)
         .expect("invalid contract text")
 
-        .add_data_state("beneficiary", beneficiary, allocation)
+        .add_data_state("assetOwner", beneficiary, allocation)
         .expect("invalid asset blob")
 
         .issue_contract()
@@ -96,10 +96,5 @@ fn main() {
     // Reading contract state through the interface from the stock:
     let contract = stock.contract_iface(contract_id, rgb21().iface_id()).unwrap();
     let nominal = contract.global("spec").unwrap();
-    let allocations = contract.fungible("beneficiary").unwrap();
     eprintln!("{}", nominal[0]);
-    
-    for FungibleAllocation { owner, witness, value } in allocations {
-        eprintln!("(amount={value}, owner={owner}, witness={witness})");
-    }
 }
